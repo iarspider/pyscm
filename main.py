@@ -1,10 +1,37 @@
-import struct
-from collections import OrderedDict
-import sys
 import os
-import zipfile
 import re
+import struct
+import sys
+import zipfile
+from collections import OrderedDict
 from io import StringIO
+import csv
+
+
+# Ripoff of Python's own DictReader, returns OrderedDict instead of regulat dict
+class OrderedDictReader(csv.DictReader):
+    def __next__(self):
+        if self.line_num == 0:
+            # noinspection PyStatementEffect
+            # Used only for its side effect.
+            self.fieldnames
+        row = next(self.reader)
+        self.line_num = self.reader.line_num
+
+        # unlike the basic reader, we prefer not to return blanks,
+        # because we will typically wind up with a dict full of None
+        # values
+        while not row:
+            row = next(self.reader)
+        d = OrderedDict(zip(self.fieldnames, row))
+        lf = len(self.fieldnames)
+        lr = len(row)
+        if lf < lr:
+            d[self.restkey] = row[lf:]
+        elif lf > lr:
+            for key in self.fieldnames[lr:]:
+                d[key] = self.restval
+        return d
 
 
 class scmFile(object):
@@ -97,62 +124,65 @@ class scmFile(object):
         self.ofile.write(data)
 
     def readA(self, ofilename):
-        #		print "Decoding to {0}...".format(ofilename),
+        # print "Decoding to {0}...".format(ofilename),
 
         # f = open("map-AirA", "rb")
         self.ofile = open(ofilename, "w")
         self.ofile.write(";".join(map(str, self.keyzA)) + "\n")
 
-        while (True):
+        while True:
+            # TODO: use struct.calcsize()
             data = self.ifile.read(40)
-            if (len(data) != 40):
-                #				print "done!"
+            if len(data) != 40:
+                # print "done!"
                 break
             self.parseA(data)
 
         self.ofile.close()
 
     def writeA(self, ofilename):
-        #		print "Packing {0}...".format(ofilename),
+        # print "Packing {0}...".format(ofilename),
         self.ofile = open(ofilename, "wb")
         self.ifile = open(ofilename + '.csv', "r")
+        # TODO: use OrderedDictReader
         self.ifile.readline()
-        while (True):
+        while True:
             d = self.ifile.readline().strip()
-            if (len(d) > 0):
+            if len(d) > 0:
                 self.packA(d.split(";"))
             else:
-                #				print "done!"
+                # print "done!"
                 break
 
         self.ofile.close()
 
     def readD(self, ofilename):
-        #		print "Decoding to {0}...".format(ofilename),
+        # print "Decoding to {0}...".format(ofilename),
 
         self.ofile = open(ofilename, "w")
         self.ofile.write(";".join(map(str, self.keyzD)) + "\n")
 
-        while (True):
+        while True:
+            # TODO: use struct.calcsize()
             data = self.ifile.read(292)
-            if (len(data) != 292):
-                #				print "done!"
+            if len(data) != 292:
+                # print "done!"
                 break
             self.parseD(data)
 
         self.ofile.close()
 
     def writeD(self, ofilename):
-        #		print "Packing {0}...".format(ofilename),
+        # print "Packing {0}...".format(ofilename),
         self.ofile = open(ofilename, "wb")
         self.ifile = open(ofilename + '.csv', "r")
         self.ifile.readline()
-        while (True):
+        while True:
             d = self.ifile.readline().strip()
-            if (len(d) > 0):
+            if len(d) > 0:
                 self.packD(d.split(";"))
             else:
-                #				print "done!"
+                # print "done!"
                 break
 
         self.ofile.close()
@@ -161,101 +191,86 @@ class scmFile(object):
     def readSCM(self):
         zName = ""
         for xName in os.listdir("."):
-            if (re.match(r"channel_list_.+_[0-9]{4}\.scm", xName)):
+            if re.match(r"channel_list_.+_[0-9]{4}\.scm", xName):
                 zName = xName
                 break
 
-        if (zName == ""):
-            print
-            "ERROR: No scm file(s) found!"
+        if zName == "":
+            print("ERROR: No scm file(s) found!")
             sys.exit(0)
 
-        print
-        "Unpacking files from {0}:".format(zName)
+        print("Unpacking files from {0}:".format(zName))
 
         zFile = zipfile.ZipFile(zName, "r")
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
-            print
-            "\t" + fName + "...",
+            print("\t" + fName + "...", end='')
             # zFile.extract(fName)
             data = zFile.read(fName)
-            self.ifile = StringIO.StringIO(data)
-            if (fName.endswith('A')):
+            self.ifile = StringIO(data)
+            if fName.endswith('A'):
                 self.readA(fName + '.csv')
 
-            if (fName.endswith('D')):
+            if fName.endswith('D'):
                 self.readD(fName + '.csv')
-            print
-            "done!"
+            print("done!")
 
-        print
-        "All done!"
+        print("All done!")
         zFile.close()
 
     def writeSCM(self):
         zName = ""
         for xName in os.listdir("."):
-            if (re.match(r"channel_list_.+_[0-9]{4}\.scm", xName)):
+            if re.match(r"channel_list_.+_[0-9]{4}\.scm", xName):
                 zName = xName
                 break
 
-        if (zName == ""):
-            print
-            "ERROR: No scm file(s) found!"
+        if zName == "":
+            print("ERROR: No scm file(s) found!")
             sys.exit(0)
 
-        print
-        "Creating temporary directory to store unchanged files...",
+        print("Creating temporary directory to store unchanged files...", end="")
         os.mkdir("ztmp")
-        print
-        "done!"
+        print("done!")
 
-        print
-        "Unpacking all files from {0}...".format(zName),
+        print("Unpacking all files from {0}...".format(zName), end="")
         zFile = zipfile.ZipFile(zName, "r")
         zFile.extractall("ztmp")
         zFile.close()
-        print
-        "done!"
+        print("done!")
 
         zFile = zipfile.ZipFile(zName, "w", zipfile.ZIP_DEFLATED)
 
-        print
-        "Packing modified files:"
+        print("Packing modified files:")
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
-            print
-            "\t" + fName + "...",
-            if (fName.endswith("A")):
+            print("\t" + fName + "...", end="")
+            if fName.endswith("A"):
                 self.writeA(fName)
 
-            if (fName.endswith("D")):
+            if fName.endswith("D"):
                 self.writeD(fName)
 
             zFile.write(fName)
             os.remove(fName)
-            print
-            "done!"
+            print("done!")
 
-        print
-        "Packing unmodified files:",
+        print("Packing unmodified files:", end="")
+
         for file in os.listdir("ztmp"):
             if not (file in ("map-AirA", "map-AirD", "map-CableA", "map-CableD")):
                 zFile.write(os.path.join("ztmp", file), file)
-                print
-                file,
-            os.remove(os.path.join("ztmp", file))
-        print
-        "done!"
+                print(file, end="")
 
-        print
-        "Removing temporary directory...",
+            os.remove(os.path.join("ztmp", file))
+        print("done!")
+
+        print("Removing temporary directory...", end="")
         os.rmdir("ztmp")
         zFile.close()
-        print
-        "done!"
+        print("done!")
 
-        print
-        "All done!"
+        print("All done!")
+
+
 class scmFileF:
     def __init__(self):
         self.keyzA = ['Available', 'Used', 'Skip', 'Source', 'Signal', 'Modulation', 'Locked', 'Unknown7',
@@ -263,7 +278,7 @@ class scmFileF:
                       'Favorites1', 'Favorites2', 'Favorites3', 'Favorites4', 'Favorites5', 'Unknown35',
                       'Unknown36', 'Unknown37', 'Unknown38', 'CRC']
         self.keyzD = ["Number", "VID_PID", "PCR_PID", "SID", "Unknown8", "Unknown9", "Source", "Signal",
-        #             
+                      # 
                       "Modulation", "Unknown13", "Bandwidth", "Type", "VideoCodec", "Unknown17", "Unknown18",
                       "Unknown19", "VideoWidth", "VideoHeight", "Scrambled", "FrameRate", "Unknown26",
                       "Unknown27", "SymbolRate", "Unknown30", "Locked", "ONID", "NID", "Unknown36",
@@ -274,23 +289,19 @@ class scmFileF:
         pass
 
 
-
-
 if __name__ == "__main__":
     if (len(sys.argv) != 2) or (sys.argv[1].lower() != 'read' and sys.argv[1].lower() != 'write'):
-        print
-        "Usage: runme.py read - to decode channel list"
-        print
-        "       runme.py write - to reencode channel list"
+        print("Usage: runme.py read - to decode channel list")
+        print("       runme.py write - to reencode channel list")
         sys.exit(0)
 
     scm = scmFile()
 
-    if (sys.argv[1].lower() == 'write'):
+    if sys.argv[1].lower() == 'write':
         scm.writeSCM()
     # os.remove("map-AirA.csv")
-    #	os.remove("map-AirD.csv")
-    #	os.remove("map-CableA.csv")
-    #	os.remove("map-CableD.csv")
+    # os.remove("map-AirD.csv")
+    # os.remove("map-CableA.csv")
+    # os.remove("map-CableD.csv")
     else:
         scm.readSCM()
