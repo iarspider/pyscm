@@ -42,8 +42,8 @@ class OrderedDictWriter(csv.DictWriter):
 
 class scmFile(object):
     def __init__(self, formatA, formatD):
-        self.struct = {'A': "".join(x[1] for x in formatA),
-                       'D': "".join(x[1] for x in formatD)}
+        self.struct = {'A': '<' + "".join(x[1] for x in formatA),
+                       'D': '<' + "".join(x[1] for x in formatD)}
         self.fieldNames = {'A': [x[0] for x in formatA],
                            'D': [x[0] for x in formatD]}
         self.blockSize = {'A': struct.calcsize(self.struct['A']),
@@ -251,7 +251,6 @@ class scmFile(object):
 
 
 class scmFileF(scmFile):
-    # noinspection PyUnresolvedReferences
     def __init__(self):
         formatA = [('Available', 'b'), ('Used', 'b'), ('Skip', 'b'), ('Source', 'b'), ('Signal', 'b'),
                    ('Modulation', 'b'), ('Locked', 'b'), ('Unknown7', 'b'), ('Tuned', 'b'), ('Number', 'h'),
@@ -260,27 +259,27 @@ class scmFileF(scmFile):
                    ('Favorite4', 'l'), ('Favorites5', 'l'), ('Unknown35', 'l'), ('Unknown36', 'b'), ('Unknown37', 'b'),
                    ('Unknown38', 'B'), ('CRC', 'B')]
 
-        formatD = []
+        formatD = [('Number', 'h'), ('VID_PID', 'h'), ('PCR_PID', 'h'), ('SID', 'H'), ('Skip', 'b'), ('Unknown9', 'b'),
+                   ('Source', 'b'), ('Signal', 'b'), ('Modulation', 'b'), ('Unknown13', 'b'), ('Bandwidth', 'b'),
+                   ('Type', 'B'), ('VideoCodec', 'b'), ('Unknown17', 'b'), ('Unknown18', 'b'), ('Unknown19', 'b'),
+                   ('VideoWidth', 'h'), ('VideoHeight', 'h'), ('Scrambled', 'b'), ('FrameRate', 'b'),
+                   ('Unknown26', 'b'), ('Unknown27', 'b'), ('SymbolRate', 'h'), ('Unknown30', 'b'), ('Locked', 'b'),
+                   ('ONID', 'H'), ('NID', 'H'), ('Unknown36', 'l'), ('Provider', 'h'), ('Channel', 'H'), ('LCN', 'h'),
+                   ('Unknown46', 'h'), ('TSID', 'H'), ('Unknown50', '6s'), ('Unknown56', 'l'), ('Unknown60', 'l'),
+                   ('Name', '200s'), ('Short', '18s'), ('VideoFormat', 'b'), ('Unknown283', 'b'), ('Unknown284', 'l'),
+                   ('Unknown288', 'h'), ('Unknown219', 'h'), ('Favorites1', 'l'), ('Favorites2', 'l'),
+                   ('Favorites3', 'l'), ('Favorites4', 'l'), ('Favorites5', 'l'), ('Unknown312', 'l'),
+                   ('Unknown316', 'h'), ('Unknown318', 'B'), ('CRC', 'B')]
 
         super(scmFileF, self).__init__(formatA, formatD)
-        # self.struct = {'A': None, 'D': None}
-        # self.fieldset = {'A': None, 'D': None}
-
-        # self.fieldNames['A'] = ['Available', 'Used', 'Skip', 'Source', 'Signal', 'Modulation', 'Locked', 'Unknown7',
-        #                         'Tuned', 'Number', 'Unknown11', 'Unknown12', 'Preset', 'Length', 'Name', 'Frequency',
-        #                         'Favorites1', 'Favorites2', 'Favorites3', 'Favorites4', 'Favorites5', 'Unknown35',
-        #                         'Unknown36', 'Unknown37', 'Unknown38', 'CRC']
-        # self.fieldNames['D'] = ["Number", "VID_PID", "PCR_PID", "SID", "Unknown8", "Unknown9", "Source", "Signal",
-        #                         "Modulation", "Unknown13", "Bandwidth", "Type", "VideoCodec", "Unknown17", "Unknown18",
-        #                         "Unknown19", "VideoWidth", "VideoHeight", "Scrambled", "FrameRate", "Unknown26",
-        #                         "Unknown27", "SymbolRate", "Unknown30", "Locked", "ONID", "NID", "Unknown36",
-        #                         "Provider", "Channel", "LCN", "Unknown46", "TSID", "Unknown50", "Unknown56",
-        #                         "Unknown60",
-        #                         "Name", "Short", "VideoFormat", "Unknown283", "Unknown284", "Unknown288", "Favorites",
-        #                         "CRC"]
-        # self.struct['A'] = "<bbbbbbbbbhblhh12sfllllllbbBB"
-        # self.struct['D'] = "<hhhHbbbbbbbBbbbbhhbbbbhbbHHlhHhhH6sll200s18sbblhBB"
         pass
+
+
+class scmFileC(scmFile):
+    def __init__(self):
+        formatA = [('Available', 'b'), ('Used', 'b'), ('Skip', 'b'), ('Source', 'b'), ('Signal', 'b'), ('Modulation', 'b'), ('Locked', 'b'), ('Unknown7', 'b'), ('Tuned', 'b'), ('Number', 'h'), ('Unknown11', 'b'), ('Unknown12', 'l'), ('Preset', 'h'), ('Length', 'h'), ('Name', '12s'), ('Frequency', 'f'), ('Favorites1', 'l'), ('Favorites2', 'l'), ('Favorites3', 'l'), ('Favorites4', 'l'), ('Favorites5', 'l'), ('Unknown35', 'l'), ('Unknown36', 'b'), ('Unknown37', 'b'), ('Unknown38', 'B'), ('CRC', 'B')]
+        formatD = [('Number', 'h'), ('VID_PID', 'h'), ('PCR_PID', 'h'), ('SID', 'H'), ('Unknown8', 'b'), ('Unknown9', 'b'), ('Source', 'b'), ('Signal', 'b'), ('Modulation', 'b'), ('Unknown13', 'b'), ('Bandwidth', 'b'), ('Type', 'B'), ('VideoCodec', 'b'), ('Unknown17', 'b'), ('Unknown18', 'b'), ('Unknown19', 'b'), ('VideoWidth', 'h'), ('VideoHeight', 'h'), ('Scrambled', 'b'), ('FrameRate', 'b'), ('Unknown26', 'b'), ('Unknown27', 'b'), ('SymbolRate', 'h'), ('Unknown30', 'b'), ('Locked', 'b'), ('ONID', 'H'), ('NID', 'H'), ('Unknown36', 'l'), ('Provider', 'h'), ('Channel', 'H'), ('LCN', 'h'), ('Unknown46', 'h'), ('TSID', 'H'), ('Unknown50', '6s'), ('Unknown56', 'l'), ('Unknown60', 'l'), ('Name', '200s'), ('Short', '18s'), ('VideoFormat', 'b'), ('Unknown283', 'b'), ('Unknown284', 'l'), ('Unknown288', 'h'), ('Favorites', 'B'), ('CRC', 'B')]
+        super(scmFileC, self).__init__(formatA, formatD)
 
 
 if __name__ == "__main__":
