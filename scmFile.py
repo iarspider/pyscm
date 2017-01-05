@@ -165,15 +165,12 @@ class scmFile(object):
         self.write(fileName, 'D')
 
     def readSCM(self, zName):
-        # zName = ""
-        # for xName in os.listdir("."):
-        #     if re.match(r"channel_list_.+_[0-9]{4}\.scm", xName):
-        #         zName = xName
-        #         break
-
         if zName == "":
             print("ERROR: No scm file(s) found!")
             sys.exit(0)
+
+        dirName = zName.rsplit('.', 1)[0]
+        os.makedirs(dirName, exist_ok=True)
 
         print("Unpacking files from {0}:".format(zName))
 
@@ -181,40 +178,33 @@ class scmFile(object):
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
             print("\t" + fName + "...", end='')
             try:
-                zFile.extract(fName)
+                zFile.extract(os.path.join(dirName, fName))
             except KeyError:
                 print("skipped!")
             else:
                 # data = zFile.read(fName)
                 # ifile = StringIO(data)
                 if fName.endswith('A'):
-                    self.readA(fName)
+                    self.readA(os.path.join(dirName, fName))
 
                 if fName.endswith('D'):
-                    self.readD(fName)
+                    self.readD(os.path.join(dirName, fName))
                 print("done!")
 
         print("All done!")
         zFile.close()
 
     def writeSCM(self, zName):
-        # zName = ""
-        # for xName in os.listdir("."):
-        #     if re.match(r"channel_list_.+_[0-9]{4}\.scm", xName):
-        #         zName = xName
-        #         break
-
         if zName == "":
             print("ERROR: No scm file(s) found!")
             sys.exit(0)
 
-        print("Creating temporary directory to store unchanged files...", end="")
-        os.mkdir("ztmp")
-        print("done!")
+        dirName = zName.rsplit('.', 1)[0]
+        os.makedirs(dirName, exist_ok=True)
 
         print("Unpacking all files from {0}...".format(zName), end="")
         zFile = zipfile.ZipFile(zName, "r")
-        zFile.extractall("ztmp")
+        zFile.extractall(dirName)
         zFile.close()
         print("done!")
 
@@ -224,10 +214,10 @@ class scmFile(object):
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
             print("\t" + fName + "...", end="")
             if fName.endswith("A"):
-                self.writeA(fName)
+                self.writeA(os.path.join(dirName, fName))
 
             if fName.endswith("D"):
-                self.writeD(fName)
+                self.writeD(os.path.join(dirName, fName))
 
             zFile.write(fName)
             os.remove(fName)
@@ -235,18 +225,15 @@ class scmFile(object):
 
         print("Packing unmodified files:", end="")
 
-        for file in os.listdir("ztmp"):
+        for file in os.listdir(dirName):
             if not (file in ("map-AirA", "map-AirD", "map-CableA", "map-CableD")):
-                zFile.write(os.path.join("ztmp", file), file)
+                zFile.write(os.path.join(dirName, file), file)
                 print(file, end="")
 
-            os.remove(os.path.join("ztmp", file))
+            os.remove(os.path.join(dirName, file))
         print("done!")
 
-        print("Removing temporary directory...", end="")
-        os.rmdir("ztmp")
         zFile.close()
-        print("done!")
 
         print("All done!")
 
