@@ -52,7 +52,13 @@ class scmFile(object):
 
     @staticmethod
     def bytes2utf16(data):
-        return data.rstrip(b'\x00').decode('utf_16_be')
+        try:
+            result = data.rstrip(b'\x00').decode('utf_16_be', errors="ignore")
+        except ValueError:
+            print("Warning: failed to decode Name field!")
+            result = ""
+
+        return result
 
     def parseA(self, data: bytes) -> OrderedDict:
         valz = struct.unpack(self.struct['A'], data)
@@ -178,8 +184,9 @@ class scmFile(object):
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
             print("\t" + fName + "...", end='')
             try:
-                zFile.extract(os.path.join(dirName, fName))
-            except KeyError:
+                zFile.extract(fName, path=dirName)
+            except KeyError as e:
+                print(e)
                 print("skipped!")
             else:
                 # data = zFile.read(fName)
