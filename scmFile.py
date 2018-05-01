@@ -50,12 +50,12 @@ class scmFile(object):
         self.parse = {'A': self.parseA, 'D': self.parseD}
         self.pack = {'A': self.packA, 'D': self.packD}
 
-        self.rows = {'AirA': [], 'AirD': [], 'CableA': [], 'CableD': []}
+        self.rows = {'map-AirA': [], 'map-AirD': [], 'map-CableA': [], 'map-CableD': []}
 
     @staticmethod
     def bytes2utf16(data):
         try:
-            result = data  # .rstrip(b'\x00')#.decode('utf_16_be', errors="ignore")
+            result = data.rstrip(b'\x00').decode('utf_16_be', errors="ignore")
         except ValueError:
             print("Warning: failed to decode Name field!")
             result = ""
@@ -152,7 +152,7 @@ class scmFile(object):
 
     def readCSV(self, filePath: str) -> None:
         fileName = os.path.basename(filePath)
-        ifile = codecs.open(filePath, "r", "utf-16be")
+        ifile = codecs.open(filePath, "r", "utf-8")
         self.rows[fileName].clear()
 
         r = OrderedDictReader(ifile)
@@ -162,8 +162,8 @@ class scmFile(object):
         ifile.close()
 
     def writeCSV(self, filePath: str):
-        cName = os.path.basename(filePath)
-        ofile = codecs.open(filePath, "w", "utf-16be")
+        cName = os.path.basename(filePath).rsplit('.', 1)[0]  # type:str
+        ofile = codecs.open(filePath, "w", "utf-8")
         w = OrderedDictWriter(ofile, fieldnames=self.fieldNames[cName[-1]])
         w.writeheader()
         for row in self.rows[cName]:
@@ -274,9 +274,7 @@ class scmFileC(scmFile):
         formatA = [('Available', 'b'), ('Used', 'b'), ('Skip', 'b'), ('Source', 'b'), ('Signal', 'b'),
                    ('Modulation', 'b'), ('Locked', 'b'), ('Unknown7', 'b'), ('Tuned', 'b'), ('Number', 'h'),
                    ('Unknown11', 'b'), ('Unknown12', 'l'), ('Preset', 'h'), ('Length', 'h'), ('Name', '12s'),
-                   ('Frequency', 'f'), ('Favorites1', 'l'), ('Favorites2', 'l'), ('Favorites3', 'l'),
-                   ('Favorites4', 'l'), ('Favorites5', 'l'), ('Unknown35', 'l'), ('Unknown36', 'b'), ('Unknown37', 'b'),
-                   ('Unknown38', 'B'), ('CRC', 'B')]
+                   ('Frequency', 'f'), ('Unknown36', 'b'), ('Unknown37', 'b'), ('Favorites', 'B'), ('CRC', 'B')]
         formatD = [('Number', 'h'), ('VID_PID', 'h'), ('PCR_PID', 'h'), ('SID', 'H'), ('Unknown8', 'b'),
                    ('Unknown9', 'b'), ('Source', 'b'), ('Signal', 'b'), ('Modulation', 'b'), ('Unknown13', 'b'),
                    ('Bandwidth', 'b'), ('Type', 'B'), ('VideoCodec', 'b'), ('Unknown17', 'b'), ('Unknown18', 'b'),

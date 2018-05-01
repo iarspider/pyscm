@@ -2,6 +2,7 @@ import argparse
 
 import scmFile
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--from", "-f", help="Source file format", dest="from_type", required=True,
@@ -22,6 +23,7 @@ def main():
         outFile = scmFile.scmFileF()
     else:
         outFile = scmFile.scmFileC()
+
 
 # TODO: Finish code
 
