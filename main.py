@@ -1,3 +1,4 @@
+#!python3
 import argparse
 
 import scmFile
@@ -20,6 +21,6 @@ if __name__ == "__main__":
         scm = scmFile.scmFileC()
 
     if args.mode == 'write':
-        scm.writeSCM(args.file)
+        scm.CSV2SCM(args.file)
     else:
-        scm.readSCM(args.file)
+        scm.SCM2CSV(args.file)

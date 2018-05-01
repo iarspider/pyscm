@@ -50,10 +50,12 @@ class scmFile(object):
         self.parse = {'A': self.parseA, 'D': self.parseD}
         self.pack = {'A': self.packA, 'D': self.packD}
 
+        self.rows = {'AirA': [], 'AirD': [], 'CableA': [], 'CableD': []}
+
     @staticmethod
     def bytes2utf16(data):
         try:
-            result = data.rstrip(b'\x00').decode('utf_16_be', errors="ignore")
+            result = data  # .rstrip(b'\x00')#.decode('utf_16_be', errors="ignore")
         except ValueError:
             print("Warning: failed to decode Name field!")
             result = ""
@@ -103,11 +105,6 @@ class scmFile(object):
 
         chan['Name'] = self.bytes2utf16(chan['Name'])
         chan['Short'] = self.bytes2utf16(chan['Short'])
-
-        if chan['Name'] != "":
-            for k, v in chan.items():
-                print(k, ' = "', v, '"')
-
         return chan
 
     def packD(self, chan: OrderedDict) -> bytes:
@@ -131,12 +128,10 @@ class scmFile(object):
         data = struct.pack(self.struct['D'], *chan)
         return data
 
-    def read(self, fileName: str, key: str) -> None:
-        ifile = open(fileName, "rb")
-        # print "Decoding file {0}...".format(fileName),
-        ofile = codecs.open(fileName + '.csv', 'w', 'utf8')
-        w = OrderedDictWriter(ofile, fieldnames=self.fieldNames[key])
-        w.writeheader()
+    def readMap(self, filePath: str) -> None:
+        ifile = open(filePath, "rb")
+        key = filePath[-1]
+        fileName = os.path.basename(filePath)
 
         while True:
             data = ifile.read(self.blockSize[key])
@@ -144,104 +139,108 @@ class scmFile(object):
                 # print "done!"
                 break
             rowDict = self.parse[key](data)
-            w.writerow(rowDict)
+            self.rows[fileName].append(rowDict)
 
-        ofile.close()
-
-    def write(self, ofilename: str, key: str) -> None:
-        # print "Packing {0}...".format(ofilename),
-        ofile = open(ofilename, "wb")
-        ifile = open(ofilename + '.csv', "r")
-        r = OrderedDictReader(ifile)
-        for row in r:
+    def writeMap(self, filePath: str) -> None:
+        ofile = open(filePath, "wb")
+        key = filePath[-1]
+        fileName = os.path.basename(filePath)
+        for row in self.rows[fileName]:
             ofile.write(self.pack[key](row))
 
         ofile.close()
 
-    def readA(self, fileName: str) -> None:
-        self.read(fileName, 'A')
+    def readCSV(self, filePath: str) -> None:
+        fileName = os.path.basename(filePath)
+        ifile = codecs.open(filePath, "r", "utf-16be")
+        self.rows[fileName].clear()
 
-    def writeA(self, fileName: str) -> None:
-        self.write(fileName, 'A')
+        r = OrderedDictReader(ifile)
+        for row in r:
+            self.rows[fileName].append(row)
 
-    def readD(self, fileName: str) -> None:
-        self.read(fileName, 'D')
+        ifile.close()
 
-    def writeD(self, fileName: str) -> None:
-        self.write(fileName, 'D')
+    def writeCSV(self, filePath: str):
+        cName = os.path.basename(filePath)
+        ofile = codecs.open(filePath, "w", "utf-16be")
+        w = OrderedDictWriter(ofile, fieldnames=self.fieldNames[cName[-1]])
+        w.writeheader()
+        for row in self.rows[cName]:
+            w.writerow(row)
 
-    def readSCM(self, zName):
-        if zName == "":
-            print("ERROR: No scm file(s) found!")
-            sys.exit(0)
+        ofile.close()
 
-        dirName = zName.rsplit('.', 1)[0]
-        os.makedirs(dirName, exist_ok=True)
-
-        print("Unpacking files from {0}:".format(zName))
-
+    def readSCM(self, zName, dirName):
         zFile = zipfile.ZipFile(zName, "r")
+        print("Extract all...", end='')
+        zFile.extractall(dirName)
+        print("done")
+        print("Load map files into memory...")
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
             print("\t" + fName + "...", end='')
-            try:
-                zFile.extract(fName, path=dirName)
-            except KeyError as e:
-                print(e)
-                print("skipped!")
-            else:
-                # data = zFile.read(fName)
-                # ifile = StringIO(data)
-                if fName.endswith('A'):
-                    self.readA(os.path.join(dirName, fName))
+            if fName.endswith('A'):
+                self.readMap(os.path.join(dirName, fName))
 
-                if fName.endswith('D'):
-                    self.readD(os.path.join(dirName, fName))
-                print("done!")
+            if fName.endswith('D'):
+                self.readMap(os.path.join(dirName, fName))
+            print("done!")
 
         print("All done!")
         zFile.close()
 
-    def writeSCM(self, zName):
+        pass
+
+    # noinspection PyMethodMayBeStatic
+    def writeSCM(self, filePath, dirName=None):
+        zFile = zipfile.ZipFile(filePath, "w", zipfile.ZIP_DEFLATED)
+        dirName = dirName or os.path.basename(filePath)
+
+        for fName in os.listdir(dirName):
+            print("\t" + fName + "...", end="")
+            mapFile = os.path.join(dirName, fName)
+            zFile.write(mapFile, fName)
+            os.remove(mapFile)
+            print("done!")
+
+        zFile.close()
+
+    def SCM2CSV(self, zName, dirName=None):
         if zName == "":
             print("ERROR: No scm file(s) found!")
             sys.exit(0)
 
-        dirName = zName.rsplit('.', 1)[0]
+        dirName = dirName or zName.rsplit('.', 1)[0]
         os.makedirs(dirName, exist_ok=True)
 
-        print("Unpacking all files from {0}...".format(zName), end="")
-        zFile = zipfile.ZipFile(zName, "r")
-        zFile.extractall(dirName)
-        zFile.close()
-        print("done!")
-
-        zFile = zipfile.ZipFile(zName, "w", zipfile.ZIP_DEFLATED)
-
-        print("Packing modified files:")
+        print("Unpacking files from {0}:".format(zName))
+        self.readSCM(zName, dirName)
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
-            print("\t" + fName + "...", end="")
-            if fName.endswith("A"):
-                self.writeA(os.path.join(dirName, fName))
+            self.writeCSV(os.path.join(dirName, fName + '.csv'))
 
-            if fName.endswith("D"):
-                self.writeD(os.path.join(dirName, fName))
+    def CSV2SCM(self, zName, dirName=None):
+        if zName == "":
+            print("ERROR: No scm file(s) found!")
+            sys.exit(0)
 
-            zFile.write(fName)
-            os.remove(fName)
-            print("done!")
+        dirName = dirName or zName.rsplit('.', 1)[0]
+        if not os.path.isdir(dirName):
+            print("ERROR: directory with CSV files does not exist!")
+            sys.exit(0)
 
-        print("Packing unmodified files:", end="")
+        print("Recreating map files...")
+        for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
+            print("\t" + fName + ": load...", end="")
+            csvFile = os.path.join(dirName, fName + '.csv')
+            self.readCSV(csvFile)
+            os.remove(csvFile)
+            print("save...", end="")
+            mapFile = os.path.join(dirName, fName)
+            self.writeMap(mapFile)
+            print("done")
 
-        for file in os.listdir(dirName):
-            if not (file in ("map-AirA", "map-AirD", "map-CableA", "map-CableD")):
-                zFile.write(os.path.join(dirName, file), file)
-                print(file, end="")
-
-            os.remove(os.path.join(dirName, file))
-        print("done!")
-
-        zFile.close()
-
+        print("Creating SCM file {0}...".format(zName))
+        self.writeSCM(zName, dirName)
         print("All done!")
 
 
