@@ -1,14 +1,16 @@
 import argparse
-import os
+import os, shutil
 import scmFile
+
+from collections import deque
 
 
 def compareA(rows_old: dict, rows_new: dict) -> None:
-    free_numbers = list(range(1, 101))
+    free_numbers = deque(range(1, 1000))
 
     # In order to avoid duplicate numbers, renumber the channels in new list
     for i, row in enumerate(rows_new):
-        row['Number'] = 1000 + i
+        row['Number'] = 10000 + i
 
     for row in rows_old:
         if row['Used'] == 1:
@@ -21,22 +23,28 @@ def compareA(rows_old: dict, rows_new: dict) -> None:
                         row2[k] = row[k]
 
                     free_numbers.remove(int(row['Number']))
+                    print("Matched channel, set to number", int(row['Number']))
 
     # Place unassigned channels to available numbers
     for row in rows_new:
-        if row['Number'] > 1000:
-            row['Number'] = free_numbers.pop(0)
+        if row['Number'] > 10000:
+            try:
+                row['Number'] = free_numbers.popleft()
+            except IndexError as e:
+                print("Failed to reassign channel!", e)
+            else:
+                print("Assigned channel {Name} ({Frequency}) to number {Number}".format(**row))
 
 
 def compareD(rows_old: dict, rows_new: dict) -> None:
-    used_numbers = list(range(1, 101))
+    used_numbers = deque(range(1, 1000))
 
     # In order to avoid duplicate numbers, renumber the channels in new list
     for i, row in enumerate(rows_new):
-        row['Number'] = 1000 + i
+        row['Number'] = 10000 + i
 
     for row in rows_old:
-        if row['Number'] != 1000:
+        if row['Number'] != 10000:
             for row2 in rows_new:
                 # Two digital channels match if they have the same name
                 if row2['Name'] == row['Name']:
@@ -47,15 +55,21 @@ def compareD(rows_old: dict, rows_new: dict) -> None:
 
     # Place unassigned channels to available numbers
     for row in rows_new:
-        if row['Number'] > 1000:
-            row['Number'] = used_numbers.pop(0)
+        if row['Number'] > 10000:
+            try:
+                row['Number'] = used_numbers.popleft()
+            except IndexError as e:
+                print("Failed to reassign channel", e)
+            else:
+                print("Assigned channel {Name} to number {Number}".format(**row))
 
 
 def main():
     parser = argparse.ArgumentParser()
-    g = parser.add_mutually_exclusive_group(required=True)
+    # g = parser.add_mutually_exclusive_group(required=True)
     parser.add_argument('-f', '--format', action="store", choices=['F', 'f', 'C', 'c'], required=True)
-    parser.add_argument('file', nargs=2)
+    parser.add_argument('old')
+    parser.add_argument('new')
 
     args = parser.parse_args()
 
@@ -67,17 +81,20 @@ def main():
     os.makedirs("old", exist_ok=True)
     os.makedirs("new", exist_ok=True)
 
-    scm[0].readSCM(args.file[0], "old")
-    scm[1].readSCM(args.file[1], "new")
+    scm[0].readSCM(args.old, "old")
+    scm[1].readSCM(args.new, "new")
 
     for fmt in ('A', 'D'):
         for src in ('Air', 'Cable'):
             method = compareA if fmt == 'A' else compareD
             fname = 'map-{0}{1}'.format(src, fmt)
+            scm[1].writeCSV(os.path.join("new", fname + '.csv'))
+            shutil.move(os.path.join("new", fname + '.csv'), os.path.join("new", fname + '_old.csv'))
             method.__call__(scm[0].rows[fname], scm[0].rows[fname])
-            scm[1].writeMap(os.path.join("new",  fname))
+            # scm[1].writeMap(os.path.join("new",  fname))
+            scm[1].writeCSV(os.path.join("new", fname + '.csv'))
 
-    scm[1].writeSCM(args.file[1], "new")
+    # scm[1].writeSCM(args.file[1], "new")
 
 
 if __name__ == "__main__":
