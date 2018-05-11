@@ -83,19 +83,19 @@ class scmFile(object):
 
         chan['CRC'] = '0'
 
-        for i, x in enumerate(chan):
+        for k, v in chan.items():
             try:
-                chan[i] = int(x)
+                chan[k] = int(v)
             except ValueError:
-                chan[i] = x
+                chan[k] = v
 
-        chan['Freq'] = float(chan['Freq'])
+        chan['Frequency'] = float(chan['Frequency'])
 
         data = struct.pack(self.struct['A'], *chan.values())
 
         # Calculate CRC
         crc = sum(data) & 0xFF
-        chan[19] = crc
+        chan['CRC'] = crc
         data = struct.pack(self.struct['A'], *chan.values())
         return data
 
@@ -111,21 +111,21 @@ class scmFile(object):
         chan['Name'] = chan['Name'].ljust(200, '\x00').encode("utf_16_be")
         chan['Short'] = chan['Short'].ljust(18, '\x00').encode("utf_16_be")
 
-        chan['Unknown50'] = '\x00' * 6  # Hax!
+        chan['Unknown50'] = b'\x00' * 6  # Hax!
         chan['CRC'] = 0
 
-        for i, x in enumerate(chan):
+        for k, v in chan.items():
             try:
-                chan[i] = int(x)
+                chan[k] = int(v)
             except ValueError:
-                chan[i] = x
+                chan[k] = v
 
-        data = struct.pack(self.struct['D'], *chan)
+        data = struct.pack(self.struct['D'], *chan.values())
 
         # Calculate CRC
         crc = sum(data) & 0xFF
         chan['CRC'] = crc
-        data = struct.pack(self.struct['D'], *chan)
+        data = struct.pack(self.struct['D'], *chan.values())
         return data
 
     def readMap(self, filePath: str) -> None:
@@ -162,11 +162,16 @@ class scmFile(object):
         ifile.close()
 
     def writeCSV(self, filePath: str):
+        print('+', filePath)
         cName = os.path.basename(filePath).rsplit('.', 1)[0]  # type:str
         ofile = codecs.open(filePath, "w", "utf-8")
+        flag = False
         w = OrderedDictWriter(ofile, fieldnames=self.fieldNames[cName[-1]])
         w.writeheader()
         for row in self.rows[cName]:
+            if not flag:
+                print("+", type(row['Name']))
+                flag = True
             w.writerow(row)
 
         ofile.close()
@@ -197,6 +202,8 @@ class scmFile(object):
         dirName = dirName or os.path.basename(filePath)
 
         for fName in os.listdir(dirName):
+            if fName.endswith('.csv'):
+                continue
             print("\t" + fName + "...", end="")
             mapFile = os.path.join(dirName, fName)
             zFile.write(mapFile, fName)
