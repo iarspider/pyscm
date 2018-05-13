@@ -152,12 +152,13 @@ class scmFile(object):
 
     def readCSV(self, filePath: str) -> None:
         fileName = os.path.basename(filePath)
+        cname = fileName.replace('.csv', '')
         ifile = codecs.open(filePath, "r", "utf-8")
-        self.rows[fileName].clear()
+        self.rows[cname].clear()
 
         r = OrderedDictReader(ifile)
         for row in r:
-            self.rows[fileName].append(row)
+            self.rows[cname].append(row)
 
         ifile.close()
 
