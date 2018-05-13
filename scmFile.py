@@ -166,13 +166,9 @@ class scmFile(object):
         print('+', filePath)
         cName = os.path.basename(filePath).rsplit('.', 1)[0]  # type:str
         ofile = codecs.open(filePath, "w", "utf-8")
-        flag = False
         w = OrderedDictWriter(ofile, fieldnames=self.fieldNames[cName[-1]])
         w.writeheader()
         for row in self.rows[cName]:
-            if not flag:
-                print("+", type(row['Name']))
-                flag = True
             w.writerow(row)
 
         ofile.close()
