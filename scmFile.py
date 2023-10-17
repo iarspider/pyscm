@@ -180,6 +180,9 @@ class scmFile(object):
         print("done")
         print("Load map files into memory...")
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
+            if not os.path.exists(os.path.join(dirName, fName)):
+                print("\tSkipping " + fName + "...")
+                continue
             print("\t" + fName + "...", end='')
             if fName.endswith('A'):
                 self.readMap(os.path.join(dirName, fName))
@@ -220,6 +223,8 @@ class scmFile(object):
         print("Unpacking files from {0}:".format(zName))
         self.readSCM(zName, dirName)
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
+            if not os.path.exists(os.path.join(dirName, fName)):
+                continue
             self.writeCSV(os.path.join(dirName, fName + '.csv'))
 
     def CSV2SCM(self, zName, dirName=None):
@@ -234,6 +239,8 @@ class scmFile(object):
 
         print("Recreating map files...")
         for fName in ("map-AirA", "map-AirD", "map-CableA", "map-CableD"):
+            if not os.path.exists(os.path.join(dirName, fName + '.csv')):
+                continue
             print("\t" + fName + ": load...", end="")
             csvFile = os.path.join(dirName, fName + '.csv')
             self.readCSV(csvFile)
